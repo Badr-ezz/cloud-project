@@ -35,11 +35,11 @@ pipeline{
                     echo "Running unit and integration tests..."
                     npm test
 
-                    echo "generating test report"
-                    npm run test:report
+                    // echo "generating test report"
+                    // npm run test:report
 
-                    echo "tests report : "
-                    cat report/junit.xml
+                    // echo "tests report : "
+                    // cat reports/junit.xml
                 '''
             }
             post {
