@@ -36,6 +36,9 @@ pipeline {
                 failure {
                     echo 'Some tests failed.'
                 }
+                always {
+                  junit 'reports/junit.xml'
+                }
             }
         }
     }
