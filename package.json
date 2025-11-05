@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test --loader ./test/esbuild-loader.js \"src/__tests__/*.test.jsx\"",
-    "test:report": "node -e \"require('fs').mkdirSync('reports',{recursive:true});\" && node --test --loader ./test/esbuild-loader.js --test-reporter junit --test-reporter-destination reports/junit.xml \"src/**/*.test.jsx\""
-  },
+    "test:report": "node -e \"require('fs').mkdirSync('reports',{recursive:true});\" && node --test --loader ./test/esbuild-loader.js --test-reporter junit --test-reporter-destination reports/junit.xml \"src/__tests__/*.test.jsx\""
+   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
