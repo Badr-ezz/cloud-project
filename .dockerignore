@@ -3,7 +3,6 @@ reports
 dist
 .git
 .gitignore
-Dockerfile
 npm-debug.log*
 .dockerignore
 .env
