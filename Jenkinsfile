@@ -98,7 +98,7 @@ pipeline {
       string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
       string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
       string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID'),
-      usernamePassword(credentialsId: 'acr-credentials', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')
+      usernamePassword(credentialsId: 'deploy-credentials', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')
     ]) {
       sh '''
         set -eux
