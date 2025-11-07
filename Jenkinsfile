@@ -74,7 +74,9 @@ pipeline {
           string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
           string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
           string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
-          string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
+          string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID'),
+          string(credentialsId: 'azure-user-id', variable: 'AZ_USER_ID'),
+          string(credentialsId: 'azure-user-pass', variable: 'AZ_USER_PASS')
         ]) {
           sh '''
             set -eux
@@ -93,7 +95,7 @@ pipeline {
 
             # 2) Use that token on the **host** to login + push
             # username must be 00000000-0000-0000-0000-000000000000 for ACR token logins
-            cat acr_token | docker login "${ACR_NAME}.azurecr.io" -u 00000000-0000-0000-0000-000000000000 --password-stdin
+            cat acr_token | docker login "${ACR_NAME}.azurecr.io" -u \\"$AZ_USER_ID\\" -p \\"$AZ_USER_PASS\\"
             docker push "${IMAGE}"
 
             # 3) Clean up the token file
