@@ -64,19 +64,19 @@ pipeline {
                 // - azure-subscription-id
                 // The agent must have Docker available so we can run the azure-cli container and mount the host docker socket.
                 withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
-                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
-                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
+                    string(credentialsId: 'azure-client-id', variable: 'AZ_CLIENT_ID'),
+                    string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
+                    string(credentialsId: 'azure-tenant-id', variable: 'AZ_TENANT_ID'),
+                    string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
                 ]) {
                     sh '''
                     # Run azure-cli in a container and mount docker socket so az acr login can perform docker login
                     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                        -e AZ_CLIENT_ID='${AZ_CLIENT_ID}' -e AZ_CLIENT_SECRET='${AZ_CLIENT_SECRET}' -e AZ_TENANT_ID='${AZ_TENANT_ID}' -e AZ_SUBSCRIPTION_ID='${AZ_SUBSCRIPTION_ID}' \
+                        -e AZ_CLIENT_ID='bdea7f9a-01e6-40f4-82e9-275dc327402f' -e AZ_CLIENT_SECRET='fe6c9120-05f7-41bc-8b82-c8edff69346b' -e AZ_TENANT_ID='dc59e38c-4977-406f-bdd1-9ebbabbd387e' -e AZ_SUBSCRIPTION_ID='0b07f7e9-4d60-48da-a639-c5141bf10b24' \
                         mcr.microsoft.com/azure-cli:latest /bin/sh -c "\
-                          az login --service-principal -u \"${AZ_CLIENT_ID}\" -p \"${AZ_CLIENT_SECRET}\" --tenant \"${AZ_TENANT_ID}\" >/dev/null && \
-                          az account set --subscription \"${AZ_SUBSCRIPTION_ID}\" && \
-                          az acr login --name ${ACR_NAME} && \
+                          az login --service-principal -u \"bdea7f9a-01e6-40f4-82e9-275dc327402f\" -p \"fe6c9120-05f7-41bc-8b82-c8edff69346b\" --tenant \"dc59e38c-4977-406f-bdd1-9ebbabbd387e\" >/dev/null && \
+                          az account set --subscription \"0b07f7e9-4d60-48da-a639-c5141bf10b24\" && \
+                          az acr login --name cloudprojacrXYZ && \
                           docker push ${IMAGE}"
                     '''
                 }
@@ -86,18 +86,18 @@ pipeline {
         stage('Deploy to Web App') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
-                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
-                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
+                    string(credentialsId: 'azure-client-id', variable: 'AZ_CLIENT_ID'),
+                    string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
+                    string(credentialsId: 'azure-tenant-id', variable: 'AZ_TENANT_ID'),
+                    string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
                 ]) {
                     sh '''
                     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                      -e AZ_CLIENT_ID='${AZ_CLIENT_ID}' -e AZ_CLIENT_SECRET='${AZ_CLIENT_SECRET}' -e AZ_TENANT_ID='${AZ_TENANT_ID}' -e AZ_SUBSCRIPTION_ID='${AZ_SUBSCRIPTION_ID}' \
+                      -e AZ_CLIENT_ID='bdea7f9a-01e6-40f4-82e9-275dc327402f' -e AZ_CLIENT_SECRET='fe6c9120-05f7-41bc-8b82-c8edff69346b' -e AZ_TENANT_ID='dc59e38c-4977-406f-bdd1-9ebbabbd387e' -e AZ_SUBSCRIPTION_ID='0b07f7e9-4d60-48da-a639-c5141bf10b24' \
                       mcr.microsoft.com/azure-cli:latest /bin/sh -c "\
-                        az login --service-principal -u \"${AZ_CLIENT_ID}\" -p \"${AZ_CLIENT_SECRET}\" --tenant \"${AZ_TENANT_ID}\" >/dev/null && \
-                        az account set --subscription \"${AZ_SUBSCRIPTION_ID}\" && \
-                        az webapp config container set --name ${WEBAPP_NAME} --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${IMAGE} --docker-registry-server-url https://${ACR_NAME}.azurecr.io"
+                        az login --service-principal -u \"bdea7f9a-01e6-40f4-82e9-275dc327402f\" -p \"fe6c9120-05f7-41bc-8b82-c8edff69346b\" --tenant \"dc59e38c-4977-406f-bdd1-9ebbabbd387e\" >/dev/null && \
+                        az account set --subscription \"0b07f7e9-4d60-48da-a639-c5141bf10b24\" && \
+                        az webapp config container set --name cloudproject-webapp --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${IMAGE} --docker-registry-server-url https://cloudprojacrXYZ.azurecr.io"
                     '''
                 }
             }
