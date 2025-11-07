@@ -3,7 +3,7 @@ pipeline {
   options { timestamps() }
 
    triggers {
-    githubPush()   // <— this enables the GitHub webhook trigger
+    githubPush()   
   }
 
   environment {
