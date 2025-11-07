@@ -113,10 +113,10 @@ pipeline {
                     az webapp config container set \
                     --name \\"$WEBAPP_NAME\\" \
                     --resource-group \\"$RESOURCE_GROUP\\" \
-                    --docker-custom-image-name \\"$IMAGE\\" \
-                    --docker-registry-server-url https://$ACR_NAME.azurecr.io \
-                    --docker-registry-server-user \\"$ACR_USER\\" \
-                    --docker-registry-server-password \\"$ACR_PASS\\"
+                    --container-image-name \\"$IMAGE\\" \
+                    --container-registry-url https://$ACR_NAME.azurecr.io \
+                    --container-registry-user \\"$ACR_USER\\" \
+                    --container-registry-password \\"$ACR_PASS\\"
                     az webapp restart --name \\"$WEBAPP_NAME\\" --resource-group \\"$RESOURCE_GROUP\\"
                 "
             '''
