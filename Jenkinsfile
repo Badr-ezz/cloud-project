@@ -1,112 +1,144 @@
 pipeline {
-    agent any
+  agent any
+  options { timestamps() }
 
-    environment {
-        // Replace these defaults if you want different names; keep the credential IDs in Jenkins aligned
-        ACR_NAME = 'cloudprojacrXYZ'
-        RESOURCE_GROUP = 'rg-cloudproject'
-        WEBAPP_NAME = 'cloudproject-webapp'
-        IMAGE_REPO = 'cloudproject'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        IMAGE = "${env.ACR_NAME}.azurecr.io/${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+  environment {
+    // Azure resources
+    ACR_NAME       = 'cloudprojacrXYZ'
+    RESOURCE_GROUP = 'rg-cloudproject'
+    WEBAPP_NAME    = 'cloudproject-webapp'
+
+    // Image naming
+    IMAGE_REPO = 'cloudproject'
+    IMAGE_TAG  = "${env.BUILD_NUMBER}"
+    IMAGE      = "${env.ACR_NAME}.azurecr.io/${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout([$class: 'GitSCM',
+          branches: [[name: '*/master']],
+          userRemoteConfigs: [[url: 'https://github.com/Badr-ezz/cloud-project.git']]
+        ])
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/Badr-ezz/cloud-project.git']]])
-            }
+    stage('Install & Build') {
+      steps {
+        script {
+          docker.image('node:20-alpine').inside('--network host') {
+            sh '''
+              set -eux
+              npm ci
+              npm run build
+            '''
+          }
         }
-
-        stage('Install & Build') {
-            steps {
-                // run npm in a lightweight node container so the agent doesn't need node installed
-                script {
-                    docker.image('node:20-alpine').inside('--network host') {
-                        sh 'npm ci'
-                        sh 'npm run build'
-                    }
-                }
-            }
-        }
-
-        stage('Tests') {
-            steps {
-                script {
-                    docker.image('node:20-alpine').inside('--network host') {
-                        sh 'echo "Running unit and integration tests..."'
-                        sh 'npm run test:report || true' // do not fail the whole pipeline if tests use interactive reporter; JUnit result captured below
-                    }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: 'reports/junit.xml'
-                }
-            }
-        }
-
-        stage('Build Docker image') {
-            steps {
-                script {
-                    // Build the Docker image on the agent (requires docker on the Jenkins agent)
-                    sh "docker build -t ${IMAGE} ."
-                }
-            }
-        }
-
-        stage('Login to Azure & Push to ACR') {
-            steps {
-                // This stage expects the following Jenkins string credentials to be configured:
-                // - azure-client-id
-                // - azure-client-secret
-                // - azure-tenant-id
-                // - azure-subscription-id
-                // The agent must have Docker available so we can run the azure-cli container and mount the host docker socket.
-                withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
-                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
-                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
-                ]) {
-                    sh '''
-                    # Run azure-cli in a container and mount docker socket so az acr login can perform docker login
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                        -e AZ_CLIENT_ID='${AZ_CLIENT_ID}' -e AZ_CLIENT_SECRET='${AZ_CLIENT_SECRET}' -e AZ_TENANT_ID='${AZ_TENANT_ID}' -e AZ_SUBSCRIPTION_ID='${AZ_SUBSCRIPTION_ID}' \
-                        mcr.microsoft.com/azure-cli:latest /bin/sh -c "\
-                          az login --service-principal -u \"${AZ_CLIENT_ID}\" -p \"${AZ_CLIENT_SECRET}\" --tenant \"${AZ_TENANT_ID}\" >/dev/null && \
-                          az account set --subscription \"${AZ_SUBSCRIPTION_ID}\" && \
-                          az acr login --name ${ACR_NAME} && \
-                          docker push ${IMAGE}"
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to Web App') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
-                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
-                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
-                ]) {
-                    sh '''
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                      -e AZ_CLIENT_ID='${AZ_CLIENT_ID}' -e AZ_CLIENT_SECRET='${AZ_CLIENT_SECRET}' -e AZ_TENANT_ID='${AZ_TENANT_ID}' -e AZ_SUBSCRIPTION_ID='${AZ_SUBSCRIPTION_ID}' \
-                      mcr.microsoft.com/azure-cli:latest /bin/sh -c "\
-                        az login --service-principal -u \"${AZ_CLIENT_ID}\" -p \"${AZ_CLIENT_SECRET}\" --tenant \"${AZ_TENANT_ID}\" >/dev/null && \
-                        az account set --subscription \"${AZ_SUBSCRIPTION_ID}\" && \
-                        az webapp config container set --name ${WEBAPP_NAME} --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${IMAGE} --docker-registry-server-url https://${ACR_NAME}.azurecr.io"
-                    '''
-                }
-            }
-        }
+      }
     }
 
-    post {
+    stage('Tests') {
+      steps {
+        script {
+          docker.image('node:20-alpine').inside('--network host') {
+            sh '''
+              set +e
+              npm run test:report
+              exit 0
+            '''
+          }
+        }
+      }
+      post {
         always {
-            echo "Build ${env.BUILD_NUMBER} finished"
+          junit allowEmptyResults: true, testResults: 'reports/junit.xml'
         }
+      }
     }
+
+    stage('Build Docker image') {
+      steps {
+        sh '''
+          set -eux
+          docker build -t "${IMAGE}" .
+          docker image ls "${IMAGE}" || true
+        '''
+      }
+    }
+
+    stage('Login to Azure & Push to ACR (token flow)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
+          string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
+          string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
+          string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID'),
+          string(credentialsId: 'azure-user-id', variable: 'AZ_USER_ID'),
+          string(credentialsId: 'azure-user-pass', variable: 'AZ_USER_PASS')
+        ]) {
+          sh '''
+            set -eux
+
+            # 1) Get ACR access token **inside** azure-cli container and write it to a file in the host workspace
+            docker run --rm \
+              -v "$PWD:/work" \
+              -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
+              -e ACR_NAME \
+              mcr.microsoft.com/azure-cli:latest /bin/sh -c "
+                set -eu
+                az login --service-principal -u \\"$AZ_CLIENT_ID\\" -p \\"$AZ_CLIENT_SECRET\\" --tenant \\"$AZ_TENANT_ID\\"
+                az account set --subscription \\"$AZ_SUBSCRIPTION_ID\\"
+                az acr login -n \\"$ACR_NAME\\" --expose-token --output tsv --query accessToken > /work/acr_token
+              "
+
+            # 2) Use that token on the **host** to login + push
+            # username must be 00000000-0000-0000-0000-000000000000 for ACR token logins
+            cat acr_token | docker login "${ACR_NAME}.azurecr.io" -u \\"$AZ_USER_ID\\" -p \\"$AZ_USER_PASS\\"
+            docker push "${IMAGE}"
+
+            # 3) Clean up the token file
+            (shred -u acr_token || rm -f acr_token) || true
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to Web App') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
+          string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
+          string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
+          string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
+        ]) {
+          sh '''
+            set -eux
+            docker run --rm \
+              -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
+              -e RESOURCE_GROUP -e WEBAPP_NAME -e IMAGE -e ACR_NAME \
+              mcr.microsoft.com/azure-cli:latest /bin/sh -c "
+                set -eux
+                az login --service-principal -u \\"$AZ_CLIENT_ID\\" -p \\"$AZ_CLIENT_SECRET\\" --tenant \\"$AZ_TENANT_ID\\"
+                az account set --subscription \\"$AZ_SUBSCRIPTION_ID\\"
+                az webapp config container set \
+                  --name \\"$WEBAPP_NAME\\" \
+                  --resource-group \\"$RESOURCE_GROUP\\" \
+                  --docker-custom-image-name \\"$IMAGE\\" \
+                  --docker-registry-server-url https://$ACR_NAME.azurecr.io
+                az webapp restart --name \\"$WEBAPP_NAME\\" --resource-group \\"$RESOURCE_GROUP\\"
+              "
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "Build ${env.BUILD_NUMBER} finished for image ${env.IMAGE}"
+      sh 'docker image prune -f || true'
+    }
+  }
 }
