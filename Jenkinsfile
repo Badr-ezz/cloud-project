@@ -3,10 +3,10 @@ pipeline {
   options { timestamps() }
 
   environment {
-    // Azure resources (adjust names only if yours differ)
-    ACR_NAME        = 'cloudprojacrXYZ'
-    RESOURCE_GROUP  = 'rg-cloudproject'
-    WEBAPP_NAME     = 'cloudproject-webapp'
+    // Azure resources
+    ACR_NAME       = 'cloudprojacrXYZ'
+    RESOURCE_GROUP = 'rg-cloudproject'
+    WEBAPP_NAME    = 'cloudproject-webapp'
 
     // Image naming
     IMAGE_REPO = 'cloudproject'
@@ -68,27 +68,36 @@ pipeline {
       }
     }
 
-    stage('Login to Azure & Push to ACR') {
+    stage('Login to Azure & Push to ACR (token flow)') {
       steps {
         withCredentials([
-          string(credentialsId: 'azure-client-id',     variable: 'AZ_CLIENT_ID'),
-          string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
-          string(credentialsId: 'azure-tenant-id',     variable: 'AZ_TENANT_ID'),
+          string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
+          string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
+          string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
           string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
         ]) {
           sh '''
             set -eux
+
+            # 1) Get ACR access token **inside** azure-cli container and write it to a file in the host workspace
             docker run --rm \
-              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD:/work" \
               -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
-              -e ACR_NAME -e IMAGE \
+              -e ACR_NAME \
               mcr.microsoft.com/azure-cli:latest /bin/sh -c "
-                set -eux
+                set -eu
                 az login --service-principal -u \\"$AZ_CLIENT_ID\\" -p \\"$AZ_CLIENT_SECRET\\" --tenant \\"$AZ_TENANT_ID\\"
                 az account set --subscription \\"$AZ_SUBSCRIPTION_ID\\"
-                az acr login -n \\"$ACR_NAME\\"
-                docker push \\"$IMAGE\\"
+                az acr login -n \\"$ACR_NAME\\" --expose-token --output tsv --query accessToken > /work/acr_token
               "
+
+            # 2) Use that token on the **host** to login + push
+            # username must be 00000000-0000-0000-0000-000000000000 for ACR token logins
+            cat acr_token | docker login "${ACR_NAME}.azurecr.io" -u 00000000-0000-0000-0000-000000000000 --password-stdin
+            docker push "${IMAGE}"
+
+            # 3) Clean up the token file
+            (shred -u acr_token || rm -f acr_token) || true
           '''
         }
       }
@@ -97,15 +106,14 @@ pipeline {
     stage('Deploy to Web App') {
       steps {
         withCredentials([
-          string(credentialsId: 'azure-client-id',     variable: 'AZ_CLIENT_ID'),
-          string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
-          string(credentialsId: 'azure-tenant-id',     variable: 'AZ_TENANT_ID'),
+          string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
+          string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
+          string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
           string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
         ]) {
           sh '''
             set -eux
             docker run --rm \
-              -v /var/run/docker.sock:/var/run/docker.sock \
               -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
               -e RESOURCE_GROUP -e WEBAPP_NAME -e IMAGE -e ACR_NAME \
               mcr.microsoft.com/azure-cli:latest /bin/sh -c "
