@@ -64,10 +64,10 @@ pipeline {
                 // - azure-subscription-id
                 // The agent must have Docker available so we can run the azure-cli container and mount the host docker socket.
                 withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'AZ_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'AZ_TENANT_ID'),
-                    string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
+                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
+                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
+                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
+                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
                 ]) {
                     sh '''
                     # Run azure-cli in a container and mount docker socket so az acr login can perform docker login
@@ -86,10 +86,10 @@ pipeline {
         stage('Deploy to Web App') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'azure-client-id', variable: 'AZ_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'AZ_CLIENT_SECRET'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'AZ_TENANT_ID'),
-                    string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID')
+                    string(credentialsId: 'azure-client-id', variable: 'bdea7f9a-01e6-40f4-82e9-275dc327402f'),
+                    string(credentialsId: 'azure-client-secret', variable: 'fe6c9120-05f7-41bc-8b82-c8edff69346b'),
+                    string(credentialsId: 'azure-tenant-id', variable: 'dc59e38c-4977-406f-bdd1-9ebbabbd387e'),
+                    string(credentialsId: 'azure-subscription-id', variable: '0b07f7e9-4d60-48da-a639-c5141bf10b24')
                 ]) {
                     sh '''
                     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
