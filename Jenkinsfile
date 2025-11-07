@@ -53,7 +53,7 @@ pipeline {
       }
       post {
         always {
-          junit allowEmptyResults: true, testResults: 'reports/junit.xml'
+          junit 'reports/junit.xml'
         }
       }
     }
