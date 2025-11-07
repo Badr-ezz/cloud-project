@@ -44,9 +44,8 @@ pipeline {
         script {
           docker.image('node:20-alpine').inside('--network host') {
             sh '''
-              set +e
+              echo "Running unit and integration tests..."
               npm run test:report
-              exit 0
             '''
           }
         }
