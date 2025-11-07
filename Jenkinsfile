@@ -91,40 +91,40 @@ pipeline {
       }
     }
 
-    stage('Deploy to Web App') {
-  steps {
-    withCredentials([
-      string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
-      string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
-      string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
-      string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID'),
-      usernamePassword(credentialsId: 'deploy-credentials', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')
-    ]) {
-      sh '''
-        set -eux
-        docker run --rm \
-          -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
-          -e RESOURCE_GROUP -e WEBAPP_NAME -e IMAGE -e ACR_NAME \
-          -e ACR_USER -e ACR_PASS \
-          mcr.microsoft.com/azure-cli:latest /bin/sh -c "
-            set -eux
-            az login --service-principal -u \\"$AZ_CLIENT_ID\\" -p \\"$AZ_CLIENT_SECRET\\" --tenant \\"$AZ_TENANT_ID\\"
-            az account set --subscription \\"$AZ_SUBSCRIPTION_ID\\"
-            az webapp config container set \
-              --name \\"$WEBAPP_NAME\\" \
-              --resource-group \\"$RESOURCE_GROUP\\" \
-              --docker-custom-image-name \\"$IMAGE\\" \
-              --docker-registry-server-url https://$ACR_NAME.azurecr.io \
-              --docker-registry-server-user \\"$ACR_USER\\" \
-              --docker-registry-server-password \\"$ACR_PASS\\"
-            az webapp restart --name \\"$WEBAPP_NAME\\" --resource-group \\"$RESOURCE_GROUP\\"
-          "
-      '''
-    }
-  }
-}
+//     stage('Deploy to Web App') {
+//         steps {
+//             withCredentials([
+//             string(credentialsId: 'azure-client-id',       variable: 'AZ_CLIENT_ID'),
+//             string(credentialsId: 'azure-client-secret',   variable: 'AZ_CLIENT_SECRET'),
+//             string(credentialsId: 'azure-tenant-id',       variable: 'AZ_TENANT_ID'),
+//             string(credentialsId: 'azure-subscription-id', variable: 'AZ_SUBSCRIPTION_ID'),
+//             usernamePassword(credentialsId: 'deploy-credentials', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')
+//             ]) {
+//             sh '''
+//                 set -eux
+//                 docker run --rm \
+//                 -e AZ_CLIENT_ID -e AZ_CLIENT_SECRET -e AZ_TENANT_ID -e AZ_SUBSCRIPTION_ID \
+//                 -e RESOURCE_GROUP -e WEBAPP_NAME -e IMAGE -e ACR_NAME \
+//                 -e ACR_USER -e ACR_PASS \
+//                 mcr.microsoft.com/azure-cli:latest /bin/sh -c "
+//                     set -eux
+//                     az login --service-principal -u \\"$AZ_CLIENT_ID\\" -p \\"$AZ_CLIENT_SECRET\\" --tenant \\"$AZ_TENANT_ID\\"
+//                     az account set --subscription \\"$AZ_SUBSCRIPTION_ID\\"
+//                     az webapp config container set \
+//                     --name \\"$WEBAPP_NAME\\" \
+//                     --resource-group \\"$RESOURCE_GROUP\\" \
+//                     --docker-custom-image-name \\"$IMAGE\\" \
+//                     --docker-registry-server-url https://$ACR_NAME.azurecr.io \
+//                     --docker-registry-server-user \\"$ACR_USER\\" \
+//                     --docker-registry-server-password \\"$ACR_PASS\\"
+//                     az webapp restart --name \\"$WEBAPP_NAME\\" --resource-group \\"$RESOURCE_GROUP\\"
+//                 "
+//             '''
+//             }
+//         }
+// }
 
-  }
+  //}
 
   post {
     always {
