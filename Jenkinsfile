@@ -2,6 +2,10 @@ pipeline {
   agent any
   options { timestamps() }
 
+   triggers {
+    githubPush()   // <— this enables the GitHub webhook trigger
+  }
+
   environment {
     // Azure resources
     ACR_NAME       = 'cloudprojacrxyz'
