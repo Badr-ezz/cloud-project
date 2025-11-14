@@ -184,7 +184,7 @@ test('GetStarted component renders the circular call-to-action', () => {
 test('Hero component highlights the discount and hero copy', () => {
   const html = renderToStaticMarkup(<Hero />);
 
-  for (const snippet of ['20%', 'Payment Method.', 'The Next']) {
+  for (const snippet of ['20%', 'Payment Method.', 'Welcome']) {
     assertIncludesText(
       html,
       snippet,
